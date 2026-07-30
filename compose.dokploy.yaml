@@ -76,7 +76,7 @@ services:
     networks:
       private:
         aliases:
-          - backend
+          - matrix-api-internal
     depends_on:
       jwt-keygen:
         condition: service_completed_successfully
@@ -97,7 +97,7 @@ services:
     build:
       context: web/vue-app
     environment:
-      MATRIX_API_URL: http://backend:8081
+      MATRIX_API_URL: http://matrix-api-internal:8081
     expose:
       - "8080"
     networks:
