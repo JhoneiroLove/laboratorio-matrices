@@ -32,7 +32,9 @@ services:
     volumes:
       - jwt-keys:/keys:ro
     networks:
-      - private
+      private:
+        aliases:
+          - statistics-api-internal
     depends_on:
       jwt-keygen:
         condition: service_completed_successfully
@@ -59,7 +61,7 @@ services:
     init: true
     environment:
       MATRIX_API_ADDR: :8081
-      ANALYTICS_BASE_URL: http://statistics-api:3000
+      ANALYTICS_BASE_URL: http://statistics-api-internal:3000
       JWT_PRIVATE_KEY_PATH: /keys/jwt-private.pem
       JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem
       JWT_ISSUER: ${JWT_ISSUER:?Definí JWT_ISSUER en Dokploy}

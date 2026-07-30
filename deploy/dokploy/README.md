@@ -13,10 +13,10 @@ web:8080 (Vue + Nginx)
    |
 matrix-api-internal:8081 (API de Matrices)
    |
-statistics-api:3000 (API de Estadísticas)
+statistics-api-internal:3000 (API de Estadísticas)
 ```
 
-Sólo `web` se conecta a la red externa `dokploy-network`. Las dos API se comunican por la red privada `private` y no deben tener dominios ni puertos públicos. El alias interno único `matrix-api-internal` evita colisiones DNS con otros proyectos conectados a la red compartida de Dokploy.
+Sólo `web` se conecta a la red externa `dokploy-network`. Las dos API se comunican por la red privada `private` y no deben tener dominios ni puertos públicos. Los alias explícitos `matrix-api-internal` y `statistics-api-internal` mantienen estable la resolución DNS interna y evitan colisiones con otros proyectos conectados a la red compartida de Dokploy.
 
 ## Requisitos previos
 
