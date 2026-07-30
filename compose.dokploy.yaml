@@ -57,6 +57,10 @@ services:
     build:
       context: services/matrix-api
     init: true
+    deploy:
+      mode: replicated
+      replicas: 1
+      endpoint_mode: dnsrr
     environment:
       MATRIX_API_ADDR: :8081
       ANALYTICS_BASE_URL: http://statistics-api:3000
@@ -115,8 +119,7 @@ services:
         max-file: "3"
 
 networks:
-  private:
-    internal: true
+  private: {}
   dokploy-network:
     external: true
 
