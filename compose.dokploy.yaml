@@ -56,7 +56,7 @@ services:
       context: services/matrix-api
     init: true
     environment:
-      MATRIX_API_ADDR: :8080
+      MATRIX_API_ADDR: "0.0.0.0:8080"
       ANALYTICS_BASE_URL: http://statistics-api:3000
       JWT_PRIVATE_KEY_PATH: /keys/jwt-private.pem
       JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem
