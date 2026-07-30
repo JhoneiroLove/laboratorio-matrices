@@ -1,0 +1,183 @@
+openapi: 3.1.0
+info:
+  title: API de Estadísticas
+  version: 0.1.0
+  description: Resúmenes estadísticos síncronos para matrices identificadas por nombre.
+  license:
+    name: Todos los derechos reservados
+    identifier: LicenseRef-Proprietary
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+  - url: /
+    description: Origen actual de la API de Estadísticas.
+tags:
+  - name: Estadísticas
+    description: Calcula resúmenes numéricos globales y por matriz.
+  - name: Salud
+    description: Sondas públicas de disponibilidad y preparación.
+paths:
+  /api/v1/statistics:
+    post:
+      tags: [Estadísticas]
+      operationId: calculateStatistics
+      summary: Calcular estadísticas globales y por matriz
+      description: Acepta un arreglo llamado `matrices` y devuelve resúmenes globales y por matriz. La condición de diagonal usa el épsilon configurado, cuyo valor predeterminado actual es 1e-10; una matriz es diagonal solo cuando es cuadrada y la magnitud absoluta de todos los valores fuera de la diagonal es menor o igual que el épsilon.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatisticsRequest'
+      responses:
+        '200':
+          description: Estadísticas calculadas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statistics'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          $ref: '#/components/responses/ContentTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /health/live:
+    get:
+      tags: [Salud]
+      operationId: statisticsLiveness
+      summary: Informar si el proceso está activo
+      security: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Healthy'
+  /health/ready:
+    get:
+      tags: [Salud]
+      operationId: statisticsReadiness
+      summary: Informar si el servicio puede aceptar tráfico
+      security: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Healthy'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Matrix:
+      $ref: ../schemas/matrix.schema.json
+    Problem:
+      $ref: ../schemas/problem.schema.json
+    Statistics:
+      $ref: ../schemas/statistics.schema.json
+    NamedMatrix:
+      type: object
+      required: [name, values]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        values:
+          $ref: '#/components/schemas/Matrix'
+      additionalProperties: false
+    StatisticsRequest:
+      type: object
+      description: Una colección de matrices identificadas por nombre. El procesamiento de matrices envía exactamente los nombres rotated, Q y R.
+      required: [matrices]
+      properties:
+        matrices:
+          type: array
+          minItems: 1
+          description: Matrices identificadas por nombre incluidas en los cálculos globales y por matriz.
+          items:
+            $ref: '#/components/schemas/NamedMatrix'
+      additionalProperties: false
+      example:
+        matrices:
+          - name: rotated
+            values: [[3, 1], [4, 2]]
+          - name: Q
+            values: [[-0.316227766, -0.9486832981], [-0.9486832981, 0.316227766]]
+          - name: R
+            values: [[-3.1622776602, -4.4271887242], [0, -0.632455532]]
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: ok
+      additionalProperties: false
+  responses:
+    Healthy:
+      description: El servicio está en buen estado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Health'
+    BadRequest:
+      description: La sintaxis o la estructura de la solicitud no es válida
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Unauthorized:
+      description: La autenticación no está presente o no es válida
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Forbidden:
+      description: El origen del navegador no está permitido
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ContentTooLarge:
+      description: El cuerpo JSON de la solicitud supera el límite configurado
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UnsupportedMediaType:
+      description: Content-Type no es application/json
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UnprocessableContent:
+      description: No se puede procesar la carga de matrices o el resultado numérico
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Unavailable:
+      description: El servicio no está preparado
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    InternalError:
+      description: Error inesperado del servidor
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+security:
+  - bearerAuth: []

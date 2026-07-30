@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://matrix.local/schemas/matrix.schema.json",
+  "title": "Matriz",
+  "description": "Una matriz rectangular no vacía que contiene números reales finitos.",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "array",
+    "minItems": 1,
+    "items": {
+      "type": "number"
+    }
+  }
+}

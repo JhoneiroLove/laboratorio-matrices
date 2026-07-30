@@ -1,0 +1,296 @@
+openapi: 3.1.0
+info:
+  title: API de Matrices
+  version: 0.1.0
+  description: Autenticación, rotación en sentido horario, descomposición QR reducida y orquestación síncrona del procesamiento.
+  license:
+    name: Todos los derechos reservados
+    identifier: LicenseRef-Proprietary
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+  - url: /
+    description: Origen actual; Docker enruta localmente las llamadas a la API mediante la puerta de enlace web.
+tags:
+  - name: Autenticación
+    description: Emite tokens de acceso de corta duración para el cliente del desafío.
+  - name: Matrices
+    description: Valida, rota, descompone y orquesta el procesamiento de matrices.
+  - name: Salud
+    description: Sondas públicas de disponibilidad y preparación.
+paths:
+  /api/v1/auth/token:
+    post:
+      tags: [Autenticación]
+      operationId: issueToken
+      summary: Emitir un token de acceso de portador
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+      responses:
+        '200':
+          description: Token emitido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/matrices/rotate:
+    post:
+      tags: [Matrices]
+      operationId: rotateMatrix
+      summary: Rotar una matriz 90 grados en sentido horario
+      requestBody:
+        $ref: '#/components/requestBodies/MatrixInput'
+      responses:
+        '200':
+          description: Matriz rotada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rotation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/matrices/qr:
+    post:
+      tags: [Matrices]
+      operationId: decomposeMatrix
+      summary: Calcular una descomposición QR reducida mediante reflexiones de Householder
+      description: Para una entrada de m por n, k=min(m,n), Q es de m por k y R es de k por n. Los valores cuya magnitud absoluta esté dentro del épsilon documentado pueden normalizarse a cero.
+      requestBody:
+        $ref: '#/components/requestBodies/MatrixInput'
+      responses:
+        '200':
+          description: Descomposición QR reducida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QrResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/matrices/process:
+    post:
+      tags: [Matrices]
+      operationId: processMatrix
+      summary: Rotar, descomponer y calcular estadísticas de forma síncrona
+      description: La rotación y la QR reducida se calculan de forma independiente a partir de la entrada original. La API de Estadísticas recibe las matrices identificadas como rotated, Q y R, y la respuesta solo se devuelve cuando finaliza.
+      requestBody:
+        $ref: '#/components/requestBodies/MatrixInput'
+      responses:
+        '200':
+          description: Resultado completo del procesamiento de la matriz
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '504':
+          $ref: '#/components/responses/GatewayTimeout'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /health/live:
+    get:
+      tags: [Salud]
+      operationId: matrixLiveness
+      summary: Informar si el proceso está activo
+      security: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Healthy'
+  /health/ready:
+    get:
+      tags: [Salud]
+      operationId: matrixReadiness
+      summary: Informar si el servicio puede aceptar tráfico
+      security: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Healthy'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Matrix:
+      $ref: ../schemas/matrix.schema.json
+    Problem:
+      $ref: ../schemas/problem.schema.json
+    Statistics:
+      $ref: ../schemas/statistics.schema.json
+    MatrixInput:
+      type: object
+      required: [matrix]
+      properties:
+        matrix:
+          $ref: '#/components/schemas/Matrix'
+      additionalProperties: false
+    TokenRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+          format: password
+      additionalProperties: false
+    TokenResponse:
+      type: object
+      required: [accessToken, tokenType, expiresIn]
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          const: Bearer
+        expiresIn:
+          type: integer
+          minimum: 1
+          description: Tiempo de vida del token en segundos.
+      additionalProperties: false
+    Rotation:
+      type: object
+      required: [direction, matrix]
+      properties:
+        direction:
+          type: string
+          const: clockwise
+        matrix:
+          $ref: '#/components/schemas/Matrix'
+      additionalProperties: false
+    QrResult:
+      type: object
+      required: [q, r]
+      properties:
+        q:
+          $ref: '#/components/schemas/Matrix'
+        r:
+          $ref: '#/components/schemas/Matrix'
+      additionalProperties: false
+    ProcessResponse:
+      type: object
+      description: Resultados derivados de una matriz de entrada original. La rotación y QR son operaciones hermanas independientes.
+      required: [requestId, rotation, qr, statistics]
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        rotation:
+          $ref: '#/components/schemas/Rotation'
+        qr:
+          $ref: '#/components/schemas/QrResult'
+        statistics:
+          $ref: '#/components/schemas/Statistics'
+          description: Resúmenes globales y por matriz para las salidas identificadas como rotated, Q y R.
+      additionalProperties: false
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: ok
+      additionalProperties: false
+  requestBodies:
+    MatrixInput:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MatrixInput'
+  responses:
+    Healthy:
+      description: El servicio está en buen estado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Health'
+    BadRequest:
+      description: La sintaxis o la estructura de la solicitud no es válida
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Unauthorized:
+      description: La autenticación no está presente o no es válida
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    TooManyRequests:
+      description: Las solicitudes de tokens superaron el límite de autenticación local del proceso
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UnprocessableContent:
+      description: No se puede procesar la matriz
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    BadGateway:
+      description: La API de Estadísticas devolvió una respuesta no válida o fallida
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    GatewayTimeout:
+      description: La API de Estadísticas no finalizó dentro del tiempo de espera configurado
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Unavailable:
+      description: El servicio no está preparado
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    InternalError:
+      description: Error inesperado del servidor
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+security:
+  - bearerAuth: []

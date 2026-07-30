@@ -1,0 +1,122 @@
+services:
+  jwt-keygen:
+    build:
+      context: deploy/keygen
+    network_mode: none
+    volumes:
+      - jwt-keys:/keys
+    restart: "no"
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "2"
+
+  statistics-api:
+    build:
+      context: services/statistics-api
+    init: true
+    environment:
+      PORT: "3000"
+      CORS_ORIGINS: ${PUBLIC_ORIGIN:?Definí PUBLIC_ORIGIN en Dokploy}
+      JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem
+      JWT_ISSUER: ${JWT_ISSUER:?Definí JWT_ISSUER en Dokploy}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:?Definí JWT_AUDIENCE en Dokploy}
+      JWT_CLOCK_TOLERANCE_SECONDS: ${JWT_CLOCK_TOLERANCE_SECONDS:-30}
+      MATRIX_EPSILON: ${MATRIX_EPSILON:-1e-10}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    expose:
+      - "3000"
+    volumes:
+      - jwt-keys:/keys:ro
+    networks:
+      - private
+    depends_on:
+      jwt-keygen:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/health/ready || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  backend:
+    build:
+      context: services/matrix-api
+    init: true
+    environment:
+      MATRIX_API_ADDR: :8080
+      ANALYTICS_BASE_URL: http://statistics-api:3000
+      JWT_PRIVATE_KEY_PATH: /keys/jwt-private.pem
+      JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem
+      JWT_ISSUER: ${JWT_ISSUER:?Definí JWT_ISSUER en Dokploy}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:?Definí JWT_AUDIENCE en Dokploy}
+      DEMO_USERNAME: ${DEMO_USERNAME:?Definí DEMO_USERNAME en Dokploy}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:?Definí DEMO_PASSWORD en Dokploy}
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-10}
+      AUTH_RATE_LIMIT_WINDOW: ${AUTH_RATE_LIMIT_WINDOW:-1m}
+      ANALYTICS_TIMEOUT: ${ANALYTICS_TIMEOUT:-5s}
+    expose:
+      - "8080"
+    volumes:
+      - jwt-keys:/keys:ro
+    networks:
+      - private
+    depends_on:
+      jwt-keygen:
+        condition: service_completed_successfully
+      statistics-api:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  web:
+    build:
+      context: web/vue-app
+    environment:
+      MATRIX_API_URL: http://backend:8080
+    expose:
+      - "8080"
+    networks:
+      - private
+      - dokploy-network
+    depends_on:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+networks:
+  private:
+    internal: true
+  dokploy-network:
+    external: true
+
+volumes:
+  jwt-keys:

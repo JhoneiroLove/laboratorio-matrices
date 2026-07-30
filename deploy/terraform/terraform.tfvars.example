@@ -1,0 +1,16 @@
+project_id = "your-project-id"
+region     = "us-central1"
+
+# Preferí referencias fijadas por resumen criptográfico para que el despliegue sea reproducible.
+statistics_image = "us-central1-docker.pkg.dev/your-project-id/matrix/statistics@sha256:replace-me"
+matrix_image     = "us-central1-docker.pkg.dev/your-project-id/matrix/matrix@sha256:replace-me"
+web_image        = "us-central1-docker.pkg.dev/your-project-id/matrix/web@sha256:replace-me"
+
+jwt_issuer         = "https://matrix.example.com"
+jwt_audience       = "matrix-platform"
+allowed_cors_origin = "https://matrix.example.com"
+
+rsa_private_key_secret_id = "matrix-jwt-private-key"
+rsa_public_key_secret_id  = "matrix-jwt-public-key"
+demo_username_secret_id   = "matrix-demo-username"
+demo_password_secret_id   = "matrix-demo-password"

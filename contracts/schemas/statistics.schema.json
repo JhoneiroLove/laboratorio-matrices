@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://matrix.local/schemas/statistics.schema.json",
+  "title": "Estadísticas",
+  "$defs": {
+    "summary": {
+      "type": "object",
+      "required": ["minimum", "maximum", "sum", "average", "elements"],
+      "properties": {
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" },
+        "sum": { "type": "number" },
+        "average": { "type": "number" },
+        "elements": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "matrixSummary": {
+      "type": "object",
+      "required": ["name", "minimum", "maximum", "sum", "average", "elements", "diagonal"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" },
+        "sum": { "type": "number" },
+        "average": { "type": "number" },
+        "elements": { "type": "integer", "minimum": 1 },
+        "diagonal": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "statistics": {
+      "type": "object",
+      "description": "Resúmenes globales y por matriz para todas las matrices identificadas por nombre en la solicitud.",
+      "required": ["global", "matrices", "anyDiagonal"],
+      "properties": {
+        "global": { "$ref": "#/$defs/summary" },
+        "matrices": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Un resumen por cada matriz solicitada, conservando su nombre.",
+          "items": { "$ref": "#/$defs/matrixSummary" }
+        },
+        "anyDiagonal": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$ref": "#/$defs/statistics"
+}

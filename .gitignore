@@ -1,0 +1,24 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+.local/
+
+# Editors and operating systems
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Generated output
+dist/
+build/
+coverage/
+*.log
+docs/generated/
+*.pdf
+
+# Dependencies
+node_modules/
+vendor/

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://matrix.local/schemas/problem.schema.json",
+  "title": "Detalles del problema",
+  "description": "Respuesta de detalles del problema conforme a RFC 9457. Se permiten miembros de extensión.",
+  "type": "object",
+  "required": ["type", "title", "status"],
+  "properties": {
+    "type": { "type": "string", "format": "uri-reference", "default": "about:blank" },
+    "title": { "type": "string" },
+    "status": { "type": "integer", "minimum": 100, "maximum": 599 },
+    "detail": { "type": "string" },
+    "instance": { "type": "string", "format": "uri-reference" }
+  },
+  "additionalProperties": true
+}
